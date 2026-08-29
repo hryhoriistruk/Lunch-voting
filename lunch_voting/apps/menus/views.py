@@ -46,6 +46,13 @@ class TodayMenuView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
+        # Only employees and admins can view today's menu
+        if not (request.user.is_employee or request.user.is_admin):
+            return Response(
+                {"detail": "Only employees and admins can view today's menu."},
+                status=403
+            )
+
         if request.version_info.is_legacy:
             items = get_todays_menu_items()
             data = LegacyMenuItemSerializer(items, many=True).data

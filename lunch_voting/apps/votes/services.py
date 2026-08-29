@@ -4,6 +4,7 @@ Isolating this from the view/serializer layer means the "can this vote be
 changed right now?" rule is defined and tested in exactly one place.
 """
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Count
 from django.utils import timezone
 
@@ -52,25 +53,32 @@ def get_todays_results():
     Returns a list of dicts: restaurant id/name, menu id and vote count,
     including restaurants that received zero votes today (so clients don't
     need a separate call to know which restaurants published a menu).
+    Results are cached for 5 minutes.
     """
     today = timezone.localdate()
-    menus = Menu.objects.filter(date=today).select_related("restaurant")
+    cache_key = f"todays_results_{today}"
 
-    vote_counts = dict(
-        Vote.objects.filter(date=today)
-        .values("menu_id")
-        .annotate(count=Count("id"))
-        .values_list("menu_id", "count")
-    )
+    results = cache.get(cache_key)
+    if results is None:
+        menus = Menu.objects.filter(date=today).select_related("restaurant")
 
-    results = [
-        {
-            "menu_id": menu.id,
-            "restaurant_id": menu.restaurant.id,
-            "restaurant_name": menu.restaurant.name,
-            "votes": vote_counts.get(menu.id, 0),
-        }
-        for menu in menus
-    ]
-    results.sort(key=lambda row: row["votes"], reverse=True)
+        vote_counts = dict(
+            Vote.objects.filter(date=today)
+            .values("menu_id")
+            .annotate(count=Count("id"))
+            .values_list("menu_id", "count")
+        )
+
+        results = [
+            {
+                "menu_id": menu.id,
+                "restaurant_id": menu.restaurant.id,
+                "restaurant_name": menu.restaurant.name,
+                "votes": vote_counts.get(menu.id, 0),
+            }
+            for menu in menus
+        ]
+        results.sort(key=lambda row: row["votes"], reverse=True)
+        cache.set(cache_key, results, 60 * 5)  # Cache for 5 minutes
+
     return results

@@ -41,6 +41,9 @@ Built with **Django + Django REST Framework**, **JWT auth**, **PostgreSQL**,
 - Health check endpoint for monitoring
 - Structured logging with configurable levels
 - Security headers and HTTPS support for production
+- **Performance optimizations**: Database indexes for frequently queried fields
+- **Caching**: Menu and results caching to reduce database load
+- **Enhanced validation**: Deadline validation for voting, role-based access control
 
 ## Architecture
 
