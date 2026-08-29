@@ -101,3 +101,18 @@ def test_results_are_ordered_by_vote_count_descending(
 
     assert response.data[0]["restaurant_id"] == another_todays_menu.restaurant_id
     assert response.data[0]["votes"] == 2
+
+
+def test_employee_can_cast_first_vote_even_after_deadline(
+    api_client, employee_user, todays_menu, monkeypatch
+):
+    """A employee who hasn't voted yet today can still vote after the
+    deadline hour - the deadline only blocks *changing* an existing vote.
+    """
+    monkeypatch.setattr("apps.votes.services._voting_deadline_passed", lambda: True)
+
+    api_client.force_authenticate(user=employee_user)
+    response = api_client.post("/api/votes/", {"menu_id": todays_menu.id})
+
+    assert response.status_code == 200
+    assert response.data["menu_id"] == todays_menu.id

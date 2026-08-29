@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -20,24 +19,18 @@ class VoteCastSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "date", "created_at", "updated_at")
 
     def validate(self, data):
-        """Validate that the menu is for today and voting deadline hasn't passed."""
-        menu = data.get("menu")
+        """Validate that the requested menu is for today.
 
-        # Check if menu is for today
+        Deadline handling (first vote vs. changing an existing vote) is
+        business logic and lives in services.cast_vote() - not here, so
+        there is exactly one place that decides whether a vote is allowed.
+        """
+        menu = data["menu"]
         today = timezone.localdate()
         if menu.date != today:
             raise serializers.ValidationError(
                 "You can only vote for today's menu."
             )
-
-        # Check voting deadline
-        current_hour = timezone.localtime().hour
-        deadline_hour = getattr(settings, "VOTE_DEADLINE_HOUR", 11)
-        if current_hour >= deadline_hour:
-            raise serializers.ValidationError(
-                f"Voting closed at {deadline_hour}:00."
-            )
-
         return data
 
 
