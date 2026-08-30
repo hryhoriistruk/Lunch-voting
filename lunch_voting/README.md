@@ -121,18 +121,18 @@ All endpoints except token creation require a JWT access token in the
 
 ```bash
 # Obtain a token pair
-curl -X POST http://localhost:8000/api/auth/token/ \
+curl -X POST http://localhost:8000/api/v1/auth/token/ \
   -H "Content-Type: application/json" \
   -d '{"username": "admin", "password": "your-password"}'
 
 # -> {"access": "...", "refresh": "..."}
 
 # Use the access token
-curl http://localhost:8000/api/restaurants/ \
+curl http://localhost:8000/api/v1/restaurants/ \
   -H "Authorization: Bearer <access-token>"
 
 # Refresh an expired access token
-curl -X POST http://localhost:8000/api/auth/token/refresh/ \
+curl -X POST http://localhost:8000/api/v1/auth/token/refresh/ \
   -H "Content-Type: application/json" \
   -d '{"refresh": "<refresh-token>"}'
 ```
@@ -141,22 +141,22 @@ curl -X POST http://localhost:8000/api/auth/token/refresh/ \
 
 | Method | Endpoint                                   | Role     | Description                                  |
 |--------|---------------------------------------------|----------|-----------------------------------------------|
-| POST   | `/api/auth/token/`                          | -        | Obtain JWT access + refresh tokens            |
-| POST   | `/api/auth/token/refresh/`                  | -        | Refresh an access token                       |
-| POST   | `/api/employees/`                           | Admin    | Create a new employee account                 |
-| GET    | `/api/employees/`                           | Admin    | List employees                                |
-| POST   | `/api/restaurants/`                         | Admin    | Create a restaurant                           |
-| GET    | `/api/restaurants/`                         | Any user | List restaurants                              |
-| GET/PUT/DELETE | `/api/restaurants/<id>/`            | Admin (write) / Any (read) | Manage a single restaurant  |
-| POST   | `/api/restaurants/<id>/menus/`              | Admin    | Upload (or replace) the menu for a given day  |
-| GET    | `/api/menus/today/`                         | Any user | Get every restaurant's menu for today         |
-| POST   | `/api/votes/`                               | Employee | Vote for a menu (today only)                  |
-| GET    | `/api/votes/results/today/`                 | Any user | Get today's voting results                    |
+| POST   | `/api/v1/auth/token/`                       | -        | Obtain JWT access + refresh tokens            |
+| POST   | `/api/v1/auth/token/refresh/`               | -        | Refresh an access token                       |
+| POST   | `/api/v1/employees/`                        | Admin    | Create a new employee account                 |
+| GET    | `/api/v1/employees/`                        | Admin    | List employees                                |
+| POST   | `/api/v1/restaurants/`                      | Admin    | Create a restaurant                           |
+| GET    | `/api/v1/restaurants/`                      | Any user | List restaurants                              |
+| GET/PUT/DELETE | `/api/v1/restaurants/<id>/`           | Admin (write) / Any (read) | Manage a single restaurant  |
+| POST   | `/api/v1/restaurants/<id>/menus/`            | Admin    | Upload (or replace) the menu for a given day  |
+| GET    | `/api/v1/menus/today/`                      | Any user | Get every restaurant's menu for today         |
+| POST   | `/api/v1/votes/`                            | Employee | Vote for a menu (today only)                  |
+| GET    | `/api/v1/votes/results/today/`              | Any user | Get today's voting results                    |
 
 ### Example: create a restaurant (admin)
 
 ```bash
-curl -X POST http://localhost:8000/api/restaurants/ \
+curl -X POST http://localhost:8000/api/v1/restaurants/ \
   -H "Authorization: Bearer <admin-access-token>" \
   -H "Content-Type: application/json" \
   -d '{"name": "Sunny Kitchen", "address": "1 Main St"}'
@@ -165,7 +165,7 @@ curl -X POST http://localhost:8000/api/restaurants/ \
 ### Example: upload today's menu (admin)
 
 ```bash
-curl -X POST http://localhost:8000/api/restaurants/1/menus/ \
+curl -X POST http://localhost:8000/api/v1/restaurants/1/menus/ \
   -H "Authorization: Bearer <admin-access-token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -180,7 +180,7 @@ curl -X POST http://localhost:8000/api/restaurants/1/menus/ \
 ### Example: create an employee (admin)
 
 ```bash
-curl -X POST http://localhost:8000/api/employees/ \
+curl -X POST http://localhost:8000/api/v1/employees/ \
   -H "Authorization: Bearer <admin-access-token>" \
   -H "Content-Type: application/json" \
   -d '{"username": "alice", "email": "alice@example.com", "password": "a-strong-password"}'
@@ -189,7 +189,7 @@ curl -X POST http://localhost:8000/api/employees/ \
 ### Example: get today's menu (employee)
 
 ```bash
-curl http://localhost:8000/api/menus/today/ \
+curl http://localhost:8000/api/v1/menus/today/ \
   -H "Authorization: Bearer <employee-access-token>" \
   -H "X-App-Version: 2.1.0"
 ```
@@ -197,7 +197,7 @@ curl http://localhost:8000/api/menus/today/ \
 ### Example: vote (employee)
 
 ```bash
-curl -X POST http://localhost:8000/api/votes/ \
+curl -X POST http://localhost:8000/api/v1/votes/ \
   -H "Authorization: Bearer <employee-access-token>" \
   -H "Content-Type: application/json" \
   -d '{"menu_id": 1}'
@@ -206,7 +206,7 @@ curl -X POST http://localhost:8000/api/votes/ \
 ### Example: today's results
 
 ```bash
-curl http://localhost:8000/api/votes/results/today/ \
+curl http://localhost:8000/api/v1/votes/results/today/ \
   -H "Authorization: Bearer <employee-access-token>" \
   -H "X-App-Version: 2.1.0"
 ```
@@ -279,6 +279,9 @@ docker-compose exec web pytest
 
 # locally
 pytest
+
+# with coverage report
+pytest --cov=apps --cov-report=html
 ```
 
 The suite covers, among other things:
@@ -292,6 +295,18 @@ The suite covers, among other things:
   changing a vote
 - Results aggregation and ordering
 
+### Test Coverage
+
+The project uses `coverage.py` to measure test coverage. Coverage reports are
+generated in both terminal and HTML format. To view the HTML report:
+
+```bash
+pytest --cov=apps --cov-report=html
+open htmlcov/index.html  # macOS
+# or
+xdg-open htmlcov/index.html  # Linux
+```
+
 ## Linting
 
 ```bash
@@ -299,6 +314,86 @@ flake8 .
 ```
 
 Configuration lives in `.flake8` (100-char line length, migrations excluded).
+
+## Pre-commit Hooks
+
+The project includes pre-commit hooks for code quality:
+
+```bash
+# Install pre-commit
+pip install pre-commit
+
+# Install hooks
+pre-commit install
+
+# Run hooks manually
+pre-commit run --all-files
+```
+
+Hooks include:
+- Black code formatter
+- Flake8 linter
+- Trailing whitespace removal
+- YAML validation
+- Large file detection
+
+## Makefile
+
+A Makefile is provided for common development tasks:
+
+```bash
+make help           # Show all available commands
+make install        # Install production dependencies
+make install-dev    # Install development dependencies
+make run            # Run development server
+make migrate        # Run database migrations
+makeseed           # Seed database with sample data
+make test           # Run tests
+make test-cov       # Run tests with coverage
+make lint           # Run flake8
+make clean          # Clean up cache files
+make docker-build   # Build Docker containers
+make docker-up      # Start Docker containers
+make docker-down    # Stop Docker containers
+make docker-test    # Run tests in Docker
+```
+
+## CI/CD
+
+The project includes a GitHub Actions workflow that automatically runs tests and
+linting on every push and pull request to the `main` and `develop` branches.
+
+The CI pipeline:
+- Sets up Python 3.12 environment
+- Installs dependencies
+- Runs flake8 for code quality checks
+- Executes tests with PostgreSQL service
+- Generates coverage reports
+- Uploads coverage reports as artifacts
+
+### Docker Compose for Testing
+
+A separate `docker-compose.test.yml` is provided for running tests in isolation:
+
+```bash
+docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+```
+
+This uses a separate test database and automatically generates coverage reports.
+
+## Seed Data
+
+For demo or testing purposes, you can seed the database with sample data:
+
+```bash
+python manage.py seed_data
+```
+
+This creates:
+- 1 admin user (username: `admin`, password: `admin123`)
+- 3 employee users (alice, bob, charlie with password `username123`)
+- 3 restaurants (Sunny Kitchen, Green Bowl, Pasta House)
+- Today's menus with sample items for each restaurant
 
 ## Security
 

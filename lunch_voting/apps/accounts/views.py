@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import generics
 
 from apps.core.permissions import IsAdmin
+from apps.core.throttling import MenuUploadRateThrottle
 
 from .serializers import EmployeeCreateSerializer, EmployeeSerializer
 
@@ -13,6 +14,7 @@ class EmployeeListCreateView(generics.ListCreateAPIView):
 
     queryset = User.objects.filter(role=User.Role.EMPLOYEE).order_by("username")
     permission_classes = (IsAdmin,)
+    throttle_classes = (MenuUploadRateThrottle,)
 
     def get_serializer_class(self):
         return EmployeeCreateSerializer if self.request.method == "POST" else EmployeeSerializer

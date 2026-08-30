@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: lunch_voting_test
+      POSTGRES_USER: lunch_voting
+      POSTGRES_PASSWORD: lunch_voting
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lunch_voting"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: pytest --cov=apps --cov-report=term --cov-report=html
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: lunch_voting_test
+      POSTGRES_USER: lunch_voting
+      POSTGRES_PASSWORD: lunch_voting
+      USE_SQLITE: false
+      DEBUG: false
+      SECRET_KEY: test-secret-key
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - htmlcov:/app/htmlcov

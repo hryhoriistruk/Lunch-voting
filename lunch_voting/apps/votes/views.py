@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.permissions import IsEmployee
+from apps.core.throttling import VoteRateThrottle
 
 from .serializers import (
     LegacyResultRowSerializer,
@@ -20,6 +21,7 @@ class CastVoteView(generics.GenericAPIView):
 
     serializer_class = VoteCastSerializer
     permission_classes = (IsEmployee,)
+    throttle_classes = (VoteRateThrottle,)
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

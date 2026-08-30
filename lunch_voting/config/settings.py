@@ -9,8 +9,20 @@ from datetime import timedelta
 from pathlib import Path
 
 from decouple import Csv, config
+from dotenv import load_dotenv
+
+from .env_validation import validate_env
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# python-decouple reads values straight from the .env file into its own
+# internal repository, but it never populates os.environ. validate_env()
+# checks os.environ directly, so without this step it always sees the
+# required variables as "missing" even when .env is filled in correctly.
+load_dotenv(BASE_DIR / ".env")
+
+validate_env()
 
 SECRET_KEY = config("SECRET_KEY", default="insecure-dev-key-change-me")
 DEBUG = config("DEBUG", default=False, cast=bool)
@@ -49,6 +61,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.core.middleware.RequestLoggingMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -258,3 +271,44 @@ CSRF_COOKIE_HTTPONLY = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
+
+# --------------------------------------------------------------------------
+# Caching
+# --------------------------------------------------------------------------
+# Use Redis for caching in production, fall back to local memory cache for dev
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache"
+        if config("REDIS_URL", default=None)
+        else "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+        if config("REDIS_URL", default=None)
+        else {},
+        "KEY_PREFIX": "lunch_voting",
+        "TIMEOUT": 300,  # 5 minutes default
+    }
+}
+
+# --------------------------------------------------------------------------
+# Sentry Error Tracking
+# --------------------------------------------------------------------------
+SENTRY_DSN = config("SENTRY_DSN", default=None)
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            RedisIntegration(),
+        ],
+        traces_sample_rate=0.1,  # 10% of transactions for performance monitoring
+        profiles_sample_rate=0.1,  # 10% of profiling
+        environment=config("SENTRY_ENVIRONMENT", default="development"),
+        send_default_pii=False,
+    )
