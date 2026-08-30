@@ -275,17 +275,27 @@ X_FRAME_OPTIONS = "DENY"
 # --------------------------------------------------------------------------
 # Caching
 # --------------------------------------------------------------------------
-# Use Redis for caching in production, fall back to local memory cache for dev
+# Use Redis for caching in production, fall back to local memory cache for dev.
+#
+# NOTE: "CLIENT_CLASS" is an OPTIONS key understood only by the third-party
+# django-redis package's own backend (django_redis.cache.RedisCache). Django's
+# built-in backend (django.core.cache.backends.redis.RedisCache) does not
+# accept it and passes OPTIONS straight through to redis-py, which raises
+# TypeError: __init__() got an unexpected keyword argument 'CLIENT_CLASS'.
+# Using django_redis.cache.RedisCache here keeps BACKEND and OPTIONS
+# consistent with each other.
+_REDIS_URL = config("REDIS_URL", default=None)
+
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache"
-        if config("REDIS_URL", default=None)
+        "BACKEND": "django_redis.cache.RedisCache"
+        if _REDIS_URL
         else "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+        "LOCATION": _REDIS_URL or "redis://127.0.0.1:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
-        if config("REDIS_URL", default=None)
+        if _REDIS_URL
         else {},
         "KEY_PREFIX": "lunch_voting",
         "TIMEOUT": 300,  # 5 minutes default
